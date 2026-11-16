@@ -10,6 +10,8 @@ Otherwise, saves the best one to src/wip/<Name>.c (only if it improves on the or
 import os, random, re, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from versions import REFERENCE, target, taken
 a = sys.argv[1:]
 def opt(n, d): return a[a.index(n) + 1] if n in a else d
 SRC = [x for x in a if x.endswith(".c")][0]
@@ -131,7 +133,7 @@ def score_all(cands):
 
 def main():
     base = open(SRC).read()
-    hm = re.search(r"//\s*FUNC\s+([0-9a-fA-F]+)", base)
+    hm = re.search(r"//\s*FUNC\s+([0-9a-fA-F]+)\s+\d+\s+(\w+)", base)
     if not hm: sys.exit("missing // FUNC")
     name = os.path.basename(SRC)[:-2]
     best, bs = base, score_all([base])[0]
@@ -145,7 +147,10 @@ def main():
             if sc[k] < bs: print("round %d: %d -> %d" % (rd, bs, sc[k]), flush=True)
             best, bs = cands[k], sc[k]
     if bs == 0:
-        dst = "%s/src/%s.c" % (ROOT, name); open(dst, "w").write(best)
+        dst = target(REFERENCE, hm.group(2), int(hm.group(1), 16), name)
+        clash = taken(dst)
+        if clash and clash != dst: sys.exit("%s clashes with %s; the match stays in %s" % (dst, clash, WORK))
+        open(dst, "w").write(best)
         subprocess.run([sys.executable, ROOT + "/tools/matchcheck.py", "--mark", dst],
                        env=dict(os.environ, WORK=WORK + "/w"), capture_output=True)
         if os.path.abspath(SRC) != os.path.abspath(dst) and "/wip/" in SRC: os.remove(SRC)

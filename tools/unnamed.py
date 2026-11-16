@@ -26,6 +26,7 @@ ROOT = os.path.dirname(HERE)
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import sysovl
+from versions import MAIN_SRC_DIRS, main_sources
 
 GENERIC = re.compile(r"(?:FUN|func)_[0-9a-fA-F]{8}$")
 HDR = re.compile(r"//\s*FUNC\s+([0-9a-fA-F]+)\s+(\d+)\s+(\w+)")
@@ -64,7 +65,7 @@ def note_of(lines):
 def scan_sources():
     """[entry] of every generic-named function of MAIN0 / X000 / SYSTEM overlays, in (prog, address) order."""
     out = []
-    for f in sorted(glob.glob(os.path.join(ROOT, "src", "*.c"))):
+    for f in main_sources():
         stem = os.path.basename(f)[:-2]
         if stem.endswith("_slpm80165") or not GENERIC.match(stem):
             continue
@@ -91,9 +92,9 @@ def scan_sources():
 
 
 def scope_files(prog):
-    """Source files whose identifiers belong to the program: MAIN0 and X000 share src/*.c (+ include/), each SYSTEM overlay has its dir."""
+    """Source files whose identifiers belong to the program: MAIN0 and X000 share src/*.c and src/psyq/*.c (+ include/), each SYSTEM overlay has its dir."""
     if prog in ("MAIN0", "X000"):
-        fs = [f for f in glob.glob(os.path.join(ROOT, "src", "*.c")) if not f.endswith("_slpm80165.c")]
+        fs = [f for d in MAIN_SRC_DIRS for f in glob.glob(os.path.join(ROOT, d, "*.c")) if not f.endswith("_slpm80165.c")]
         fs += glob.glob(os.path.join(ROOT, "src", "data", "**", "*.c"), recursive=True)
         fs += glob.glob(os.path.join(ROOT, "include", "**", "*.h"), recursive=True)
         return sorted(fs)

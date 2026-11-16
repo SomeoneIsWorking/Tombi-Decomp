@@ -7,6 +7,8 @@ The ones that match are copied to src/<Name>.c with the // MATCHING marker.
 import csv, os, re, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from versions import REFERENCE, target, taken
 args = sys.argv[1:]
 def opt(n, d):
     return args[args.index(n) + 1] if n in args else d
@@ -72,7 +74,10 @@ def main():
             if m and m.group(3) not in seen:
                 seen.add(m.group(3)); addr = m.group(3)
                 row = next(r for r in chunk if r["address"] == addr)
-                name = row["name"]; dst = "%s/src/%s.c" % (ROOT, name)
+                name = row["name"]; dst = target(REFERENCE, blocks[addr][0], int(addr, 16), name)
+                clash = taken(dst)
+                if clash and clash != dst:
+                    print("SKIP", name, addr, "clashes with", clash, flush=True); continue
                 shutil.copy("%s/%s_v%s.c" % (WORK, addr, m.group(2)), dst)
                 subprocess.run([sys.executable, ROOT + "/tools/matchcheck.py", "--mark", dst],
                                env=env, capture_output=True)

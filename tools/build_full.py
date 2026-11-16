@@ -65,6 +65,7 @@ PROGS = {
 # SYSTEM code overlays (tools/sysovl.py), linked from src/<prog lower>/*.c + splat, each checked by its sha1
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import sysovl as _SO
+from versions import MAIN_SRC_DIRS, PSYQ_SRC
 for _p, (_path, _sha, _code) in _SO.SYSOVL.items():
     _f = os.path.join(ROOT, "game", _path)
     PROGS[_p.lower()] = dict(name=_p, game="game/" + _path, vram=_SO.BASE, size=os.path.getsize(_f) if os.path.exists(_f) else 0,
@@ -380,10 +381,10 @@ def compile_all():
         s = os.path.join(ROOT, "include", f)
         if os.path.isdir(s): shutil.copytree(s, os.path.join(inc, f)); continue
         for nm in {f, f.upper(), f.lower()}: shutil.copy(s, os.path.join(inc, nm))
-    os.makedirs(os.path.join(OUT, "obj"), exist_ok=True); os.makedirs(os.path.join(OUT, "tmp"), exist_ok=True)
+    os.makedirs(os.path.join(OUT, "obj", "psyq"), exist_ok=True); os.makedirs(os.path.join(OUT, "tmp"), exist_ok=True)
     units, jobs = [], []
     if VER: return compile_version(units, jobs, inc)
-    files = [("src", f) for f in sorted(os.listdir(os.path.join(ROOT, "src")))]
+    files = [(d, f) for d in MAIN_SRC_DIRS for f in sorted(os.listdir(os.path.join(ROOT, d)))]
     for P in PROGS.values():
         if P.get("src") and os.path.isdir(os.path.join(ROOT, P["src"])):
             files += [(P["src"], f) for f in sorted(os.listdir(os.path.join(ROOT, P["src"])))]
@@ -394,8 +395,9 @@ def compile_all():
         if not h: continue
         addr, size, prog, flags = h
         if prog.lower() not in PROGS: continue
-        stem = f[:-2] if sd == "src" else "%s__%s" % (prog.lower(), f[:-2])
-        obj = os.path.join(OUT, "obj", stem + ".o")
+        stem = f[:-2] if sd in MAIN_SRC_DIRS else "%s__%s" % (prog.lower(), f[:-2])
+        # library objects apart: libc's rand.o and the game's Rand.o are one file on a case-insensitive disk
+        obj = os.path.join(OUT, "obj", "psyq" if sd == PSYQ_SRC else "", stem + ".o")
         units.append(dict(name=stem, src=sd + "/" + f, addr=addr, size=size, prog=prog.lower(), obj=obj))
         jobs.append((path, flags, obj, inc))
     for p in PROGS:

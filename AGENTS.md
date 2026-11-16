@@ -12,6 +12,10 @@ built from ONE `src/` tree (`tools/versions.py`). A function is done when our C,
 gives the exact bytes of the disc. Progress: `tools/progress.py` (PAL, README/docs/PROGRESS.md),
 `tools/build_report.py --version <v>` + `tools/progress_jp.py` (other versions; ~10 min).
 
+MAIN0 game code lives at the top of `src/`; the Psy-Q library linked into MAIN0 (every address from the
+version's `PSYQ_START` in `tools/versions.py` up) lives in `src/psyq/`. `versions.target()` picks the directory, so
+tools never hard-code it. The library has its own `rand.c` beside the game's `Rand.c`, so the two must never share a folder.
+
 ## Checkers
 
 | What | Command | Notes |

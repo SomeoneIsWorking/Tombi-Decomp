@@ -27,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
+from versions import MAIN_SRC_DIRS, taken
 import sysovl
 
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
@@ -135,9 +136,9 @@ def load_rows(path):
 def locate(row):
     """src file of the function: by name and the `// FUNC addr size prog` header."""
     prog, old, addr = row["prog"], row["old"], int(row["address"], 16)
-    d = os.path.join(ROOT, "src", prog.lower()) if prog in OWN_PROGS else os.path.join(ROOT, "src")
-    cands = [os.path.join(d, old + ".c")] if old else []
-    cands += [f for f in glob.glob(os.path.join(d, "*.c")) if not f.endswith("_slpm80165.c")]
+    dirs = [os.path.join(ROOT, "src", prog.lower())] if prog in OWN_PROGS else [os.path.join(ROOT, d) for d in MAIN_SRC_DIRS]
+    cands = [os.path.join(d, old + ".c") for d in dirs] if old else []
+    cands += [f for d in dirs for f in glob.glob(os.path.join(d, "*.c")) if not f.endswith("_slpm80165.c")]
     for f in cands:
         m = func_header(f)
         if m and int(m.group(1), 16) == addr and m.group(3) == prog:
@@ -152,7 +153,8 @@ def scope_text_files(prog):
     if prog in AREA_PROGS:
         return (glob.glob(os.path.join(ROOT, "src", prog.lower(), "*.[ch]")) + glob.glob(os.path.join(ROOT, "src", "data", prog.lower(), "*.[ch]"))
                 + glob.glob(os.path.join(ROOT, "include", "**", "*.h"), recursive=True))
-    fs = glob.glob(os.path.join(ROOT, "src", "*.[ch]")) + glob.glob(os.path.join(ROOT, "src", "x0[0-9][0-9]", "*.[ch]"))
+    fs = [f for d in MAIN_SRC_DIRS for f in glob.glob(os.path.join(ROOT, d, "*.[ch]"))]
+    fs += glob.glob(os.path.join(ROOT, "src", "x0[0-9][0-9]", "*.[ch]"))
     fs += glob.glob(os.path.join(ROOT, "src", "data", "**", "*.[ch]"), recursive=True) + glob.glob(os.path.join(ROOT, "include", "**", "*.h"), recursive=True)
     return fs
 
@@ -202,8 +204,9 @@ def validate(rows):
         if not why:
             d = os.path.dirname(r["path"])
             other = csv_names(prog).get(new)
-            if os.path.exists(os.path.join(d, new + ".c")):
-                why = "src/%s.c exists" % new
+            clash = taken(os.path.join(d, new + ".c"))
+            if clash and clash != r["path"]:
+                why = "%s exists" % rel(clash)
             elif other is not None and other != int(r["address"], 16):
                 why = "name used by %08x in the function csv" % other
             elif prog in AREA_PROGS and re.search(r"\b%s\s*\(" % re.escape(new), read(r["path"])) and not re.search(r"\b%s\b" % re.escape(r["old"]), read(r["path"])):

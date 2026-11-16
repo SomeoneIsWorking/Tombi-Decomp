@@ -9,6 +9,8 @@ Usage: tools/tomba_port.py <psx_tomba .c file> <function> <pal_hex> [--write] [-
 Environment: PSX_TOMBA (psx_tomba checkout), OLDGCC (compiler, default /opt/oldgcc/gcc-2.7.2-psx)."""
 import os, re, struct, subprocess, sys, tempfile, shutil
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from versions import REFERENCE, main_sources, target, taken
 PT = os.environ.get("PSX_TOMBA", os.path.join(os.path.dirname(ROOT), "hansbonini", "psx_tomba"))
 GCC = os.environ.get("OLDGCC", "/opt/oldgcc/gcc-2.7.2-psx")
 
@@ -43,10 +45,9 @@ def batch(mapfiles):
                 best = min(r[2], key=lambda h: abs(h - r[1] - delta))
                 if abs(best - r[1] - delta) < 0x400: r[2] = [best]
     have = set()
-    for f in os.listdir(ROOT + "/src"):
-        if f.endswith(".c"):
-            m = re.search(r"//\s*MATCHING\s+([0-9a-fA-F]+)", open(ROOT + "/src/" + f, errors="replace").read(300))
-            if m: have.add(int(m.group(1), 16))
+    for f in main_sources():
+        m = re.search(r"//\s*MATCHING\s+([0-9a-fA-F]+)", open(f, errors="replace").read(300))
+        if m: have.add(int(m.group(1), 16))
     for nm, na, hits, tag, src in rows:
         if len(hits) != 1:
             print("SKIP", nm, tag, src); continue
@@ -225,11 +226,11 @@ for s, t in ren.items():
 final = hdr % (pal, size, rel, func) + body2
 # write & check with ncheck
 stem = func
-dst = ROOT + "/src/" + stem + ".c"
+dst = target(REFERENCE, "MAIN0", pal, stem)
 os.makedirs(ROOT + "/src/wip", exist_ok=True)
 tmp = ROOT + "/src/wip/_port_" + stem + ".c"
-if os.path.exists(dst):
-    sys.exit("EXISTS %s" % dst)
+if taken(dst):
+    sys.exit("EXISTS %s" % taken(dst))
 open(tmp, "w").write(final)
 r = subprocess.run([sys.executable, ROOT + "/tools/ncheck.py", tmp], capture_output=True, text=True)
 res = r.stdout.strip().splitlines()

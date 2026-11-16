@@ -27,6 +27,7 @@ NEW = [p for p in OVERLAYS if p != "X000"]
 # SYSTEM code overlays (tools/sysovl.py): same base, code starts after their header table
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import sysovl as _SO
+from versions import main_sources
 FIRST = {}
 for _p, (_path, _sha, _code) in _SO.SYSOVL.items():
     OVERLAYS[_p] = _path
@@ -221,7 +222,7 @@ def src_functions():
     (The SYSTEM overlays share code with each other, and so do the area overlays (X010's collideObjectWithTiltedBar
     exists only in X001), so their matched files are twin sources too, for the later overlays: see analyse.)"""
     out = []
-    paths = [os.path.join(ROOT, "src", f) for f in sorted(os.listdir(os.path.join(ROOT, "src")))]
+    paths = main_sources()
     for sp in _SO.PROGS + NEW:
         d = os.path.join(ROOT, "src", sp.lower())
         if os.path.isdir(d): paths += [os.path.join(d, f) for f in sorted(os.listdir(d))]

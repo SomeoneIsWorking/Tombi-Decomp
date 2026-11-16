@@ -55,7 +55,7 @@ from multiprocessing import Pool
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 os.chdir(ROOT)
-from versions import VERSIONS, canon, pal_src_dir
+from versions import VERSIONS, canon, src_dir, taken
 import version_share as VS
 import build_report as BR
 import units as U
@@ -489,9 +489,9 @@ class Sweep:
         # header declares; build_report gives the function the version symbol anyway)
         body = note + "\n" + body
         fname = name if name.endswith("_" + self.ver) else name + "_" + self.ver
-        d = pal_src_dir(self.ver, prog)
+        d = src_dir(self.ver, prog, addr)
         path = os.path.join(d, fname + ".c")
-        if os.path.exists(path): path = os.path.join(d, "%s_%08X.c" % (fname, addr))
+        if taken(path): path = os.path.join(d, "%s_%08X.c" % (fname, addr))
         hdr = ["// VERSION %s %s %08X %d" % (self.serial, prog, addr, size)]
         want = dict(dirs)
         if want.get("FLAGS") == "-O2 -G0": want.pop("FLAGS")

@@ -35,7 +35,7 @@ import os, re, sys, json
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
-from versions import VERSIONS, canon, pal_src_dir
+from versions import VERSIONS, canon, src_dir, taken
 
 DRY = "--dry-run" in sys.argv
 DIRECTIVES = ("FLAGS", "CC", "HEADERS", "AS", "ASPSX")
@@ -203,9 +203,9 @@ class Share:
         body = re.sub(r"\bfunc_%08X\b(?!_)" % addr, "func_%08X_%s" % (addr, self.ver), body)
         if re.fullmatch(r"func_[0-9A-F]{8}", name): name = "func_%08X" % addr
         if not name.endswith("_" + self.ver): name += "_" + self.ver
-        d = os.path.join(ROOT, pal_src_dir(self.ver, prog))
+        d = os.path.join(ROOT, src_dir(self.ver, prog, addr))
         path = os.path.join(d, name + ".c")
-        if os.path.exists(path): path = os.path.join(d, "%s_%08X.c" % (name, addr))
+        if taken(path): path = os.path.join(d, "%s_%08X.c" % (name, addr))
         hdr = ["// VERSION %s %s %08X %d" % (self.serial, prog, addr, size)]
         hdr += ["// %s.%s %s" % (k, self.serial, v) for k, v in sorted(dirs.items())]
         self.write(path, "\n".join(hdr) + "\n" + join_branches([(self.serial, body)], None))

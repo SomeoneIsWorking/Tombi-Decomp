@@ -11,6 +11,10 @@ category name, file name as passed to tools/xmatch.py, vram of xmatch offset 0, 
 this program). The last field skips the X00 code that every JP area overlay repeats at its start (it is counted
 once, in x00).
 """
+import os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 JP_OVL = 0x800E9AF8   # retail JP overlay base (jal targets on prologues, like the demo estimate)
 JP_SHARED = 0x2B680   # every JP X<nn>.BIN starts with these bytes of X00.BIN; the area part follows
@@ -80,6 +84,51 @@ def pal_prog(ver, prog):
 def pal_src_dir(ver, prog):
     p = pal_prog(ver, prog)
     return "src" if p in ("main0", "x000") else "src/" + p
+
+
+# Sony's Psy-Q libraries are linked after the game in every version's main executable; their C lives in src/psyq/,
+# apart from the game's (libc's rand.c beside the game's Rand.c is one file on a case-insensitive disk).
+PSYQ_SRC = "src/psyq"
+# The main executable's C: the game's, then the libraries'.
+MAIN_SRC_DIRS = ("src", PSYQ_SRC)
+# Per version, the lowest known library function of the main executable; everything from it up is library code.
+PSYQ_START = {REFERENCE: 0x8005B934, "scus94236": 0x8005B38C, "slps01144": 0x8005844C, "slpm80165": 0x8005126C,
+              "beta980203": 0x80059E84, "pcpx96084": 0x8008746C}
+
+
+def is_psyq(ver, prog, addr):
+    """Whether the function at `addr` of `prog` (a `// FUNC` or `// VERSION` program) is library code."""
+    main = prog.lower() == "main0" if ver == REFERENCE else pal_prog(ver, prog) == "main0"
+    return main and addr >= PSYQ_START[ver]
+
+
+def src_dir(ver, prog, addr):
+    """The directory a function's C goes in: src/psyq/ for library code, else its program's."""
+    if is_psyq(ver, prog, addr):
+        return PSYQ_SRC
+    return "src" if ver == REFERENCE and prog.lower() in ("main0", "x000") else (
+        "src/" + prog.lower() if ver == REFERENCE else pal_src_dir(ver, prog))
+
+
+def target(ver, prog, addr, name):
+    """The C file a function named `name` gets: <src_dir>/<name>.c, absolute."""
+    return os.path.join(ROOT, src_dir(ver, prog, addr), name + ".c")
+
+
+def taken(path):
+    """The file a new `path` would clash with: one of the same name in its directory, letter case aside (Windows and macOS
+    disks fold case, so two such names are one file there); None when the name is free."""
+    d, name = os.path.split(path)
+    for f in (os.listdir(d) if os.path.isdir(d) else ()):
+        if f.lower() == name.lower():
+            return os.path.join(d, f)
+    return None
+
+
+def main_sources():
+    """Every .c file of the main executable's directories (and X000's, which shares src/), sorted by directory."""
+    return [os.path.join(ROOT, d, f) for d in MAIN_SRC_DIRS if os.path.isdir(os.path.join(ROOT, d))
+            for f in sorted(os.listdir(os.path.join(ROOT, d))) if f.endswith(".c")]
 
 
 def canon(v):

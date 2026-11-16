@@ -9,6 +9,8 @@ Usage: tools/tomba_map.py [--gcc /opt/oldgcc/gcc-2.7.2-psx] [--bin game/AREA00/X
 Environment: PSX_TOMBA = checkout of https://github.com/hansbonini/psx_tomba (default <parent of this repo>/hansbonini/psx_tomba)."""
 import os, re, struct, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from versions import main_sources
 PT = os.environ.get("PSX_TOMBA", os.path.join(os.path.dirname(ROOT), "hansbonini", "psx_tomba"))
 args = sys.argv[1:]
 GCC = args[args.index("--gcc") + 1] if "--gcc" in args else os.environ.get("OLDGCC", "/opt/oldgcc/gcc-2.7.2-psx")
@@ -25,11 +27,10 @@ else:  # raw overlay (X0nn.BIN), all loaded at 0x800E8028
     LOAD = 0x800E8028
 # our matched funcs
 have = {}
-for f in os.listdir(ROOT + "/src"):
-    if f.endswith(".c"):
-        t = open(ROOT + "/src/" + f, errors="replace").read(400)
-        m = re.search(r"//\s*MATCHING\s+([0-9a-fA-F]+)\s+(\d+)", t)
-        if m: have[int(m.group(1), 16)] = f
+for p in main_sources():
+    t = open(p, errors="replace").read(400)
+    m = re.search(r"//\s*MATCHING\s+([0-9a-fA-F]+)\s+(\d+)", t)
+    if m: have[int(m.group(1), 16)] = os.path.basename(p)
 ntsc = {}
 for l in open(PT + "/symbols/scus_942.36/symbol_addrs.txt"):
     m = re.match(r"(\w+)\s*=\s*0x([0-9A-Fa-f]+)", l)

@@ -42,6 +42,7 @@ for _p in OVERLAYS:
 # SYSTEM code overlays (tools/sysovl.py): O0PTSUB0, D0SPSUB*, G0OVER, I0NFO* at 0x800E8028; sources in src/<prog lower>/
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 import sysovl as _SO
+from versions import main_sources
 for _p, (_path, _sha, _code) in _SO.SYSOVL.items():
     IMAGES[_p] = (_path, "raw")
     RAW_BASE[_p] = _SO.BASE
@@ -135,8 +136,7 @@ def cc1_for(cc):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     mark = "--mark" in sys.argv; keep_asm = "--asm" in sys.argv
-    files = args or sorted(os.path.join(ROOT, "src", f) for f in os.listdir(os.path.join(ROOT, "src")) if f.endswith(".c")) \
-        if os.path.isdir(os.path.join(ROOT, "src")) else []
+    files = args or main_sources()
     jobs = []
     shutil.rmtree(WORK, ignore_errors=True); os.makedirs(WORK + "/inc")
     inc = os.path.join(ROOT, "include")

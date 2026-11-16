@@ -278,8 +278,8 @@ def install(prog, addr, size, jname, palfile, text, sources):
             hdr.insert(max([i + 1 for i, l in enumerate(hdr) if re.match(r"//\s*(FUNC|MATCHING|VERSION)\s", l)] or [len(hdr)]), vline)
         open(palfile, "w").write("\n".join(hdr) + "\n" + VS.join_branches(branches, pal))
         return palfile
-    from versions import pal_src_dir
-    d = pal_src_dir(VER, prog)
+    from versions import src_dir
+    d = src_dir(VER, prog, addr)
     name = jname if jname.endswith("_" + VER) else jname + "_" + VER
     out = "%s/%s.c" % (d, name)
     open(out, "w").write("// near-twin of PAL %s (tools/jp_autofix.py)\n" % os.path.basename(palfile)[:-2] + text)
